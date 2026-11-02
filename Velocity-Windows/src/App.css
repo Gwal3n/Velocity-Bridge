@@ -497,6 +497,7 @@ body {
 }
 
 .setting-item input[type="text"],
+.setting-item input[type="number"],
 .setting-item input[type="password"] {
   border: 1px solid #ddd;
   padding: 8px;

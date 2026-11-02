@@ -52,6 +52,10 @@ sudo dnf install velocity-bridge libappindicator-gtk3
 
 Download the Windows installer from the [releases page](https://github.com/Trex099/Velocity-Bridge/releases/latest).
 
+To change the server port, open **Settings → Network Access**, enter a port from 1 to 65535, and click **Apply**. The app saves the choice and restarts its server. Update the server address in your iPhone shortcut to use the same port. If Windows Firewall prompts for access, allow the updated app.
+
+To build this checkout for Windows, push it to your GitHub fork and run **Actions → Build Windows installer → Run workflow**. Download the `velocity-bridge-windows-installer` artifact from the completed run. The workflow builds the Python sidecar and an unsigned NSIS installer on a Windows runner.
+
 ### Headless Installation
 For environments without a graphical user interface, a background service implementation is available. This configuration includes dependency validation and systemd service integration.
 

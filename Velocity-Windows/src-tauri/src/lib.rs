@@ -53,7 +53,7 @@ fn onboarding_state_path() -> std::path::PathBuf {
 }
 
 fn can_bind_port(port: u16) -> bool {
-    TcpListener::bind(("127.0.0.1", port)).is_ok()
+    TcpListener::bind(("0.0.0.0", port)).is_ok()
 }
 
 #[cfg(target_os = "windows")]
@@ -162,6 +162,11 @@ fn pick_server_port(preferred: Option<u16>) -> Result<u16, String> {
 #[tauri::command]
 fn get_port_conflict(port: u16) -> Result<Option<PortOwner>, String> {
     Ok(get_port_owner_windows(port))
+}
+
+#[tauri::command]
+fn is_server_port_available(port: u16) -> bool {
+    can_bind_port(port)
 }
 
 #[tauri::command]
@@ -303,6 +308,7 @@ pub fn run() {
             force_stop_server,
             pick_server_port,
             get_port_conflict,
+            is_server_port_available,
             get_firewall_status,
             stop_port_owner,
             get_onboarding_completed,

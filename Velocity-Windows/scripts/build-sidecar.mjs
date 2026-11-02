@@ -25,8 +25,8 @@ if (!targetTriple) {
 const pythonLaunchers =
   platform() === "win32"
     ? [
-        { command: "py", args: ["-3"] },
         { command: "python", args: [] },
+        { command: "py", args: ["-3"] },
         { command: "python3", args: [] },
       ]
     : [

@@ -51,6 +51,14 @@ interface PortOwner {
 
 const RESTART_DELAY_MS = 1500;
 const DEFAULT_SERVER_PORT = 8080;
+const SAVED_SERVER_PORT_KEY = "velocityServerPort";
+
+const readSavedServerPort = (): number | null => {
+  const raw = localStorage.getItem(SAVED_SERVER_PORT_KEY);
+  if (raw === null || !/^\d+$/.test(raw)) return null;
+  const port = Number(raw);
+  return Number.isInteger(port) && port >= 1 && port <= 65535 ? port : null;
+};
 
 function App() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "history" | "qr" | "settings">("dashboard");
@@ -59,7 +67,11 @@ function App() {
   const [connectionStatus, setConnectionStatus] = useState("Connecting...");
   const [showToken, setShowToken] = useState(false);
   const [serverEnabled, setServerEnabled] = useState(true);
-  const [serverPort, setServerPort] = useState(DEFAULT_SERVER_PORT);
+  const [configuredPort, setConfiguredPort] = useState<number | null>(readSavedServerPort);
+  const [portInput, setPortInput] = useState(() => String(readSavedServerPort() ?? DEFAULT_SERVER_PORT));
+  const [portError, setPortError] = useState("");
+  const [isChangingPort, setIsChangingPort] = useState(false);
+  const [serverPort, setServerPort] = useState(() => readSavedServerPort() ?? DEFAULT_SERVER_PORT);
   const [useManualConnection, setUseManualConnection] = useState(() => {
     return localStorage.getItem("velocityUseManualConnection") === "true";
   });
@@ -114,6 +126,7 @@ function App() {
   const isStoppingRef = useRef(false);
   const serverEnabledRef = useRef(serverEnabled);
   const serverPortRef = useRef(serverPort);
+  const configuredPortRef = useRef(configuredPort);
 
   useEffect(() => {
     serverEnabledRef.current = serverEnabled;
@@ -207,6 +220,14 @@ Stop it and use ${preferred}?`;
   };
 
   const chooseServerPort = async () => {
+    const configured = configuredPortRef.current;
+    if (configured !== null) {
+      const available = await invoke<boolean>("is_server_port_available", { port: configured });
+      if (!available) throw new Error(`Port ${configured} is already in use`);
+      serverPortRef.current = configured;
+      setServerPort(configured);
+      return configured;
+    }
     const port = await ensurePreferredPort();
     serverPortRef.current = port;
     setServerPort(port);
@@ -371,6 +392,39 @@ Stop it and use ${preferred}?`;
     } else {
       console.log("Starting server...");
       await startServer();
+    }
+  };
+
+  const applyServerPort = async () => {
+    if (!/^\d+$/.test(portInput)) {
+      setPortError("Enter a port from 1 to 65535.");
+      return;
+    }
+    const port = Number(portInput);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      setPortError("Enter a port from 1 to 65535.");
+      return;
+    }
+    if (configuredPortRef.current === port) return;
+    setIsChangingPort(true);
+    setPortError("");
+    try {
+      if (port !== serverPortRef.current && !(await invoke<boolean>("is_server_port_available", { port }))) {
+        setPortError(`Port ${port} is already in use.`);
+        return;
+      }
+      const wasEnabled = serverEnabledRef.current;
+      if (wasEnabled) await stopServer();
+      configuredPortRef.current = port;
+      setConfiguredPort(port);
+      localStorage.setItem(SAVED_SERVER_PORT_KEY, String(port));
+      serverPortRef.current = port;
+      setServerPort(port);
+      if (wasEnabled) await startServer();
+    } catch (err) {
+      setPortError(String(err));
+    } finally {
+      setIsChangingPort(false);
     }
   };
 
@@ -1264,6 +1318,27 @@ Stop it and use ${preferred}?`;
 
                   <div className="settings-section">
                     <h2>Network Access</h2>
+                    <div className="setting-item">
+                      <div>
+                        <label htmlFor="server-port">Server Port</label>
+                        <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#888' }}>The port used by this Windows app and your iPhone shortcut.</p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          id="server-port"
+                          type="number"
+                          min="1"
+                          max="65535"
+                          value={portInput}
+                          onChange={(e) => { setPortInput(e.target.value); setPortError(""); }}
+                          style={{ width: '90px' }}
+                        />
+                        <button type="button" onClick={applyServerPort} disabled={isChangingPort || portInput === String(configuredPort ?? serverPort)}>
+                          {isChangingPort ? "Applying..." : "Apply"}
+                        </button>
+                      </div>
+                    </div>
+                    {portError && <p role="alert" style={{ color: '#c62828', fontSize: '13px' }}>{portError}</p>}
                     {firewallNeedsRule === null ? (
                       <p style={{ fontSize: '13px', color: '#888' }}>Checking Windows Firewall rules...</p>
                     ) : firewallNeedsRule ? (

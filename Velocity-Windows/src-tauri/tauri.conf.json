@@ -46,9 +46,7 @@
       }
     },
     "windows": {
-      "nsis": {
-        "installerHooks": "./nsis-hooks.nsh"
-      },
+      "nsis": {},
       "wix": {
         "fragmentPaths": [
           "./wix/firewall.wxs",
