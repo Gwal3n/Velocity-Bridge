@@ -56,6 +56,8 @@ To change the server port, open **Settings → Network Access**, enter a port fr
 
 To keep links received from iOS on the clipboard without opening a browser, turn off **Settings → General → Open Received Links Automatically**. The setting is saved for future launches.
 
+If an older Windows installer reports **Error opening file for writing: velocity-backend.exe**, quit Velocity Bridge from its system tray icon and retry. Closing the window alone leaves the app running in the tray. If the file is still locked, end `velocity_tauri.exe` and `velocity-backend.exe` in Task Manager before retrying.
+
 To build this checkout for Windows, push it to your GitHub fork. The **Build Windows installer** workflow runs for Windows changes on `main`; you can also start it manually from **Actions → Build Windows installer → Run workflow**. Download the `velocity-bridge-windows-installer` artifact from the completed run. The workflow builds the Python sidecar and an unsigned NSIS installer on a Windows runner.
 
 ### Headless Installation

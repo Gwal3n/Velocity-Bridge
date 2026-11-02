@@ -408,10 +408,16 @@ fn kill_server() {
 
     // Use wmic instead of taskkill to avoid shutdown errors (0xc0000142)
     // wmic has better handling during system shutdown
-    let _ = std::process::Command::new("wmic")
+    let result = std::process::Command::new("wmic")
         .args(["process", "where", "name=velocity-backend.exe", "call", "terminate"])
         .creation_flags(CREATE_NO_WINDOW)
         .status();
+    if !matches!(result, Ok(status) if status.success()) {
+        let _ = std::process::Command::new("taskkill")
+            .args(["/F", "/IM", "velocity-backend.exe"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .status();
+    }
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "windows")))]
