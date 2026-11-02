@@ -93,6 +93,8 @@ function App() {
   const [autostart, setAutostart] = useState(false);
   const [isTogglingAutostart, setIsTogglingAutostart] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [openReceivedLinks, setOpenReceivedLinks] = useState(true);
+  const [isTogglingOpenReceivedLinks, setIsTogglingOpenReceivedLinks] = useState(false);
   const [startMinimized, setStartMinimized] = useState(false);
   const [isTogglingNotifications, setIsTogglingNotifications] = useState(false);
   const [isTogglingStartMinimized, setIsTogglingStartMinimized] = useState(false);
@@ -535,7 +537,7 @@ Stop it and use ${preferred}?`;
         setUpdateInfo({
           available: true,
           latestVersion: update.version,
-          currentVersion: serverStatus?.version || "3.0.4",
+          currentVersion: serverStatus?.version || "3.0.5",
           updaterHandle: update
         });
         showStatus("Update available!");
@@ -544,7 +546,7 @@ Stop it and use ${preferred}?`;
         setUpdateInfo({
           available: false,
           latestVersion: "",
-          currentVersion: serverStatus?.version || "3.0.4"
+          currentVersion: serverStatus?.version || "3.0.5"
         });
         showStatus("You're up to date");
       }
@@ -629,6 +631,7 @@ Stop it and use ${preferred}?`;
         .then(data => {
           if (data) {
             setNotificationsEnabled(data.notifications_enabled ?? true);
+            setOpenReceivedLinks(data.open_received_links ?? true);
             setStartMinimized(data.start_minimized ?? false);
             if (data.manual_address && !manualAddress) {
               setManualAddress(data.manual_address);
@@ -692,6 +695,26 @@ Stop it and use ${preferred}?`;
       showStatus("Failed to update notification setting");
     } finally {
       setIsTogglingNotifications(false);
+    }
+  };
+
+  const toggleOpenReceivedLinks = async () => {
+    if (isTogglingOpenReceivedLinks) return;
+    setIsTogglingOpenReceivedLinks(true);
+    const next = !openReceivedLinks;
+    try {
+      const res = await fetch(buildLocalServerUrl("/settings"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ open_received_links: next }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setOpenReceivedLinks(next);
+      showStatus(next ? "Received links will open automatically" : "Received links will only be copied");
+    } catch {
+      showStatus("Failed to update link setting");
+    } finally {
+      setIsTogglingOpenReceivedLinks(false);
     }
   };
 
@@ -1284,6 +1307,19 @@ Stop it and use ${preferred}?`;
                     </div>
                     <div className="setting-item">
                       <div>
+                        <label htmlFor="open-received-links">Open Received Links Automatically</label>
+                        <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#888' }}>When off, links from iOS are only copied to your clipboard.</p>
+                      </div>
+                      <input
+                        id="open-received-links"
+                        type="checkbox"
+                        checked={openReceivedLinks}
+                        onChange={toggleOpenReceivedLinks}
+                        disabled={isTogglingOpenReceivedLinks}
+                      />
+                    </div>
+                    <div className="setting-item">
+                      <div>
                         <label>Desktop Notifications</label>
                         <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#888' }}>Show notification when clipboard is received</p>
                       </div>
@@ -1377,7 +1413,7 @@ Stop it and use ${preferred}?`;
                         <label>Application Version</label>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                           <span style={{ fontFamily: 'monospace', background: '#f0f0f0', padding: '4px 8px', borderRadius: '4px', fontSize: '13px' }}>
-                            v{serverStatus?.version || "3.0.4"}
+                            v{serverStatus?.version || "3.0.5"}
                           </span>
                           {updateInfo?.available && !isDownloading && (
                             <span className="update-badge" style={{ background: '#007AFF', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>

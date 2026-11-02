@@ -706,6 +706,7 @@ async def get_settings(request: Request):
     return {
         "notifications_enabled": cfg.get("notifications_enabled", True),
         "start_minimized": cfg.get("start_minimized", False),
+        "open_received_links": cfg.get("open_received_links", True),
         "manual_address": cfg.get("manual_address", ""),
     }
 
@@ -721,6 +722,8 @@ async def update_settings(request: Request):
         cfg["notifications_enabled"] = bool(body["notifications_enabled"])
     if "start_minimized" in body:
         cfg["start_minimized"] = bool(body["start_minimized"])
+    if "open_received_links" in body:
+        cfg["open_received_links"] = bool(body["open_received_links"])
     if "manual_address" in body:
         cfg["manual_address"] = str(body["manual_address"]).strip()
 
@@ -761,13 +764,17 @@ async def receive_clipboard(request: Request, payload: ClipboardPayload):
     save_history(history)
 
     if payload.type == "url" or is_url(content):
-        copy_to_clipboard(content)
-        try:
-            webbrowser.open(content)
-            send_notification("URL Received", content[:50] + "..." if len(content) > 50 else content)
-            return {"status": "success", "action": "opened_url", "clipboard": True}
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Failed to open URL: {exc}")
+        if not copy_to_clipboard(content):
+            raise HTTPException(status_code=500, detail="Failed to copy URL to clipboard")
+        if load_config().get("open_received_links", True):
+            try:
+                webbrowser.open(content)
+                send_notification("URL Received", content[:50] + "..." if len(content) > 50 else content)
+                return {"status": "success", "action": "opened_url", "clipboard": True}
+            except Exception as exc:
+                raise HTTPException(status_code=500, detail=f"Failed to open URL: {exc}")
+        send_notification("URL Copied", content[:50] + "..." if len(content) > 50 else content)
+        return {"status": "success", "action": "copied_to_clipboard", "clipboard": True}
 
     if copy_to_clipboard(content):
         send_notification("Clipboard Updated", content[:50] + "..." if len(content) > 50 else content)
