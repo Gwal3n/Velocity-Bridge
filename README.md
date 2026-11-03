@@ -50,7 +50,7 @@ sudo dnf install velocity-bridge libappindicator-gtk3
 
 ### Windows Installation
 
-Download the Windows installer from the [releases page](https://github.com/Trex099/Velocity-Bridge/releases/latest).
+Download this fork's Windows installer from the [v3.0.4 release](https://github.com/Gwal3n/Velocity-Bridge/releases/tag/v3.0.4).
 
 To change the server port, open **Settings → Network Access**, enter a port from 1 to 65535, and click **Apply**. The app saves the choice and restarts its server. Update the server address in your iPhone shortcut to use the same port. If Windows Firewall prompts for access, allow the updated app.
 
