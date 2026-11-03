@@ -1,0 +1,67 @@
+name: Publish Windows installer release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-windows-release.yml'
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful Windows installer workflow run ID
+        required: true
+        default: '41691430423'
+      tag:
+        description: Release tag
+        required: true
+        default: 'v3.0.4'
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      BUILD_RUN: ${{ inputs.run_id || '41691430423' }}
+      RELEASE_TAG: ${{ inputs.tag || 'v3.0.4' }}
+    steps:
+      - name: Download successful Windows build
+        shell: bash
+        run: |
+          set -euo pipefail
+          conclusion=$(gh api "repos/$GH_REPO/actions/runs/$BUILD_RUN" --jq '.conclusion')
+          if [ "$conclusion" != success ]; then
+            echo "Build run $BUILD_RUN did not succeed: $conclusion" >&2
+            exit 1
+          fi
+          gh run download "$BUILD_RUN" --name velocity-bridge-windows-installer --dir installer
+          shopt -s nullglob
+          installers=(installer/*.exe)
+          if [ "${#installers[@]}" -ne 1 ]; then
+            echo "Expected exactly one Windows installer" >&2
+            exit 1
+          fi
+      - name: Publish release
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          installers=(installer/*.exe)
+          build_sha=$(gh api "repos/$GH_REPO/actions/runs/$BUILD_RUN" --jq '.head_sha')
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists; leaving it unchanged" >&2
+            exit 1
+          fi
+          cat > release-notes.md <<EOF
+          Windows installer built from this fork at commit \`$build_sha\`.
+
+          Includes the configurable server port, optional clipboard-only links, and the installer upgrade fix. The app version remains ${RELEASE_TAG#v}.
+          EOF
+          gh release create "$RELEASE_TAG" "${installers[0]}" \
+            --target "$build_sha" \
+            --title "Velocity Bridge ${RELEASE_TAG#v} (Windows fork build)" \
+            --notes-file release-notes.md
